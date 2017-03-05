@@ -28,19 +28,19 @@ def set_option( option )
       opt.separator ''
       opt.separator 'Specific options:'
 
-      opt.on('-l', '--list',         'Show all selected games list') {|v| option[:list] = v}
-      opt.on('-f [format]', '--format',         """Put list dependeing of format
+      opt.on('-l', '--list',         'Show all selected games list.') {|v| option[:list] = v}
+      opt.on('-f [format]', '--format',         """Put list dependeing of format.
                                                  title:        %%t
                                                  appid:        %%a
                                                  p_initial:    %%i
                                                  p_final:      %%f
                                                  discount_per: %%p
-                                                 def: appid: %%a\\ntitle: %%t\\ninit: %%i => final: %%f, dicount_per %%p\\n""") {|v| option[:format] = v}
-      opt.on('-u SteamID', '--update',   'Update to wishlist depending of specify a Steam ID') {|v| option[:update] = v}
-      opt.on('-s [appid]', '--select', 'Add list of appid\'s game. if no arg when showing select games') {|v| option[:select] = v}
-      opt.on('-c', '--clear',        'Select list clear') {|v| option[:clear] = v}
-      opt.on('-d VAL', '--delete',   'Delete game of specify number') {|v| option[:delete] = v}
-      opt.on('-k', '--kill',   'kill of daemon') {|v| option[:kill] = v}
+                                                 def: appid: %%a\\ntitle: %%t\\ninit: %%i => final: %%f, dicount_per %%p""") {|v| option[:format] = v}
+      opt.on('-w SteamID', '--wishlist',   'Show wishlist data depending of specify a Steam ID with format option.') {|v| option[:wishlist] = v}
+      opt.on('-s [appid]', '--select', 'Add list of appid\'s game.') {|v| option[:select] = v}
+      opt.on('-c', '--clear',        'Select list clear.') {|v| option[:clear] = v}
+      opt.on('-d VAL', '--delete',   'Delete game of specify number.') {|v| option[:delete] = v}
+      opt.on('-k', '--kill',   'kill of daemon.') {|v| option[:kill] = v}
 
       opt.separator ''
       opt.separator 'Common options:'

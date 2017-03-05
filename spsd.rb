@@ -13,145 +13,128 @@ require 'socket'
 module Steam
   class Steam_APIs
     def initialize
-      @app        = Hash.new
-      @select_app = Hash.new
+      @app = Hash.new
     end
-    def updateWishGames( userName )
-      begin
-        wishGames = []
-        for item in Nokogiri::HTML(open("https://steamcommunity.com/id/#{userName}/wishlist?sort=price")).xpath('//div[@class="wishlistRow "]/@id') do
-          wishGames.push( item.to_s.match( /game_([0-9]+)/ )[1] )
-        end
-      rescue => e
-        puts( "ERROR: get wishlist number" )
-        puts e
-        return
-      end
-      p wishGames
-      for item in wishGames
-        puts( "appid: " + item )
-        begin
-          gameData = JSON.parse( open( "http://store.steampowered.com/api/appdetails?appids=#{item}" ).read )
-          sleep(0.1)
 
-          @app[item] = Hash.new("title"=>nil,"p_initial"=>nil,"p_final"=>nil,"discount_per"=>nil)
-          @app[item]["title"]        = gameData[item]['data']['name']
-          begin
-            @app[item]["p_initial"]    = gameData[item]['data']['price_overview']['initial']/100
-            @app[item]["p_final"]      = gameData[item]['data']['price_overview']['final']/100
-            @app[item]["discount_per"] = gameData[item]['data']['price_overview']['discount_percent']
-          rescue => e
-            @app[item]["p_initial"]    = -1
-            @app[item]["p_final"]      = -1
-            @app[item]["discount_per"] = -1
-            puts e
-            puts( %{can't get #{@item} game data} )
-          end
-        rescue => e
-          puts( "ERROR: get wishlist details and initialize" )
-          puts e
-        end
-      end
-      puts( "update complete" )
-      return "update complete\n"
-    end
-    def showOnlyGameFromAppid( appid, format )
-      str = format.dup
-      begin
-        if( %r{%%t} =~ str )
-          str.gsub!( %r{%%t}, @app[appid]["title"] )
-        end
-        if( %r{%%a} =~ str )
-          str.gsub!( %r{%%a}, appid )
-        end
-        if( %r{%%i} =~ str )
-          str.gsub!( %r{%%i}, @app[appid]["p_initial"].to_s )
-        end
-        if( %r{%%f} =~ str )
-          str.gsub!( %r{%%f}, @app[appid]["p_final"].to_s )
-        end
-        if( %r{%%p} =~ str )
-          str.gsub!( %r{%%p}, @app[appid]["discount_per"].to_s )
-        end
-        puts(str)
-        return str
-      rescue => e
-        puts e
-        puts
-      end
-    end
-    def showGames format
-      puts("show all wishlit")
-      ret = 'You wish ' + @app.length.to_s + ' games\n'
-      for index in @app.keys
-        ret += showOnlyGameFromAppid( index, format ) + "\n"
-      end
-      return ret
-    end
-    def select( selectNum )
+    def select(appid)
       puts("show select list")
-      ret = "select " + selectNum + "\n"
-      if !@select_app.has_key?(selectNum)
-        if @app.has_key?(selectNum)
-          @select_app[selectNum] = nil
-        else
-          # puts selectNum + " appid game is nothing"
-          ret += selectNum + " appid game is nothing\n"
-        end
+
+      ret = "select " + appid + "\n"
+      if !@app.has_key?(appid)
+        @app[appid.to_s] = get_game_info(appid)
       else
-        # puts "already selecting of " + selectNum + "\n"
-        ret += "already selecting of " + selectNum + "\n"
+        ret += "already selecting of " + appid + "\n"
       end
       return ret
     end
-    def deleteSelect( delNum )
-      if @select_app.delete(delNum){ |name| name } != delNum
+
+    def delete(delNum)
+      if @app.delete(delNum){ |name| name } != delNum
         # puts( "deleting select list at " + delNum )
         return "deleting select list at " + delNum + "\n"
       else
         # puts( "not found appid " + delNum )
-        return "not found appid " + delNum + "\n"
+        return "not found appid: " + delNum + "\n"
       end
     end
-    def clearSelect
-      @select_app = Hash.new()
-      # File.open( "selectlist.json", "w" ) do |file| file.write("") end
+
+    def clear
+      @app = Hash.new()
+      return "clear select list"
     end
-    def showSelect format
-      puts( "showSelect" )
+
+    def format_all_select_list(format)
+      puts("show all select list")
+      ret = 'You are selecting ' + @app.length.to_s + ' games\n'
+      for key in @app.keys
+        ret += format_game_info(@app[key], format) + "\n"
+      end
+      return ret
+    end
+
+    def get_game_info(appid)
+      puts("get game info from appid: #{appid}")
+
+      ret = Hash.new("title"=>nil,"p_initial"=>nil,"p_final"=>nil,"discount_per"=>nil)
+
       begin
-        ret = "You select " + @select_app.size.to_s + " games\n\n"
-        # puts
-        for index in @select_app.keys
-          ret += showOnlyGameFromAppid(index, format)
+        url = "http://store.steampowered.com/api/appdetails?appids=#{appid}"
+        game_data= JSON.parse(open(url).read)
+        sleep(0.1)
+
+        ret["appid"] = appid
+        ret["title"] = game_data[appid]['data']['name']
+        begin
+          ret["p_initial"]    = game_data[appid]['data']['price_overview']['initial']/100
+          ret["p_final"]      = game_data[appid]['data']['price_overview']['final']/100
+          ret["discount_per"] = game_data[appid]['data']['price_overview']['discount_percent']
+        rescue => e
+          ret["p_initial"]    = -1
+          ret["p_final"]      = -1
+          ret["discount_per"] = -1
+          puts e
+          puts( %{can't get #{@appid} game data} )
         end
       rescue => e
-        puts "nothing select items"
+        puts( "ERROR: get wishlist details and initialize" )
+        puts e
+      end
+
+      return ret
+    end
+
+    def format_game_info(data, format)
+      puts("format game info")
+      fmt = format.dup
+      begin
+        fmt = fmt.gsub( %r{%%t}, data["title"] )
+        fmt = fmt.gsub( %r{%%a}, data["appid"] )
+        fmt = fmt.gsub( %r{%%i}, data["p_initial"].to_s )
+        fmt = fmt.gsub( %r{%%f}, data["p_final"].to_s )
+        fmt = fmt.gsub( %r{%%p}, data["discount_per"].to_s )
+        return fmt
+      rescue => e
+        puts "Fault show_only_game_from_appid"
         puts e
         puts
-        return "nothing select items\n"
-      else
-        puts ret
-        return ret
+        return ""
       end
     end
-    def showTotalPrice
-      puts( "showTotalPrice" )
+
+    def get_wishlist(user_name, format)
+      wish_games = []
+      begin
+        url = "https://steamcommunity.com/id/#{user_name}/wishlist?sort=price"
+        for item in Nokogiri::HTML(open(url)).xpath('//div[@class="wishlistRow "]/@id') do
+          wish_games.push(item.to_s.match(/game_([0-9]+)/)[1])
+        end
+      rescue => e
+        puts("ERROR: get wishlist number")
+        puts e
+        return
+      end
+      return wish_games.map { |appid| format_game_info(get_game_info(appid),format) }.join
+    end
+
+    def format_total_price
+      puts( "format total price" )
       sum = 0
-      for index in @select_app.keys
-        if( @app[index]["p_initial"] != -1 )
-          sum += @app[index]["p_initial"]
+      for key in @app.keys
+        if( @app[key]["p_initial"] != -1 )
+          sum += @app[key]["p_initial"]
         end
       end
+
       # puts( sprintf( "Total Price: %dY", sum ) )
       return sprintf( "Total Price: %dY\n", sum )
     end
-    def showTotalDiscount
-      puts( "showTotaldIscount" )
+
+    def format_total_discount
+      puts( "format total discount" )
       sum = 0
-      for index in @select_app.keys
-        if( @app[index]["p_initial"] != -1 and @app[index]["p_final"] != -1 )
-          sum += @app[index]["p_initial"] - @app[index]["p_final"]
+      for key in @app.keys
+        if( @app[key]["p_initial"] != -1 and @app[key]["p_final"] != -1 )
+          sum += @app[key]["p_initial"] - @app[key]["p_final"]
         end
       end
 
@@ -162,7 +145,7 @@ module Steam
 end
 
 # options help declare
-def set_option( option )
+def set_option(options)
   OptionParser.new do |opt|
     begin
       opt.program_name = File.basename($0)
@@ -173,23 +156,24 @@ def set_option( option )
       opt.separator 'Steam Purchase Simulator'
       opt.separator ''
       opt.separator 'Examples:'
-      opt.separator "    % #{opt.program_name} -u UserName -l"
+      opt.separator "    % #{opt.program_name} -s [appid] -l"
 
       opt.separator ''
       opt.separator 'Specific options:'
 
-      opt.on('-l', '--list',         'Show all wishlist with select number') {|v| option[:list] = v}
-      opt.on('-f [format]', '--format',         """Put list dependeing of format
+      opt.on('-l', '--list',         'Show all wishlist with select number') {|v| options[:list] = v}
+      opt.on('-f [format]', '--format',         """Show list dependeing of format
                                                  title:        %%t
                                                  appid:        %%a
                                                  p_initial:    %%i
                                                  p_final:      %%f
                                                  discount_per: %%p
-                                                 def: appid: %%a\\ntitle: %%t\\ninit: %%i => final: %%f, dicount_per %%p\\n""") {|v| option[:format] = v}
-      opt.on('-u SteamID', '--update',   'Update depending of specify a Steam ID') {|v| option[:update] = v}
-      opt.on('-s [appid]', '--select', 'Add list of select number\'s game. if no arg when showing select games') {|v| option[:select] = v}
-      opt.on('-c', '--clear',        'Select list clear') {|v| option[:clear] = v}
-      opt.on('-d VAL', '--delete',   'Delete game of specify number') {|v| option[:delete] = v}
+                                                 def: appid: %%a\\ntitle: %%t\\ninit: %%i => final: %%f, dicount_per %%p""") {|v| options[:format] = v}
+      opt.on('-w SteamID', '--wishlist',   'Show wishlist data depending of specify a Steam ID with format option.') {|v| option[:wishlist] = v}
+      opt.on('-s [appid]', '--select', 'Add list of appid\'s game.') {|v| option[:select] = v}
+      opt.on('-c', '--clear',        'Select list clear') {|v| options[:clear] = v}
+      opt.on('-d VAL', '--delete',   'Delete game of specify number') {|v| options[:delete] = v}
+      opt.on('-k', '--kill',   'kill of daemon.') {|v| option[:kill] = v}
 
       opt.separator ''
       opt.separator 'Common options:'
@@ -210,46 +194,40 @@ def set_option( option )
   end
 end
 
-def do_cmd( steam, params )
-  puts params
+
+def do_cmd(steam, params)
   set_option(params)
   format = ""
-  # puts( params )
+  puts(params)
 
   results = ""
 
-  if( params[:format] == nil )
+  if( !params.has_key?(:format) )
     format = %{appid: %%a\ntitle: %%t\ninit: %%i => final: %%f, dicount_per %%p\n}
   else
     format = %{#{params[:format].gsub(%r{\\n}, %{\n})}}
   end
-  if( params[:update] != nil )
-    # puts( "UPDATED of: " + params[:update] )
-    results += steam.updateWishGames(params[:update])
+  if( params.has_key?(:wishlist) )
+    results += steam.get_wishlist(params[:wishlist], format)
   end
-  if( params[:list] == true )
-    results += steam.showGames format
+  if( params.has_key?(:list) )
+    results += steam.format_all_select_list(format)+"\n"
+    results += steam.format_total_price+"\n"
+    results += steam.format_total_discount
   end
   if( params.has_key?(:select) )
-    if( params[:select] == nil )
-      results += steam.showSelect format+"\n"
-      results += steam.showTotalPrice+"\n"
-      results += steam.showTotalDiscount
-    else
-      results+= steam.select( params[:select] )
-    end
+    results+= steam.select(params[:select])
   end
-  if( params[:delete] != nil )
-    results += steam.deleteSelect( params[:delete] )
+  if( params.has_key?(:delete) )
+    results += steam.delete(params[:delete])
   end
   if( params[:clear] == true )
-    results += steam.clearSelect
+    results += steam.clear
   end
   if( params[:kill] == true )
     exit(1)
   end
   if( params == {} )
-    # puts( "usage: -h, --help" )
     results += "usage: -h, --help"
   end
   return results
@@ -277,4 +255,3 @@ def main()
 end
 
 main()
-
