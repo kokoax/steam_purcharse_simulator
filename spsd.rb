@@ -45,7 +45,7 @@ module Steam
 
     def format_all_select_list(format)
       puts("show all select list")
-      ret = 'You are selecting ' + @app.length.to_s + ' games\n'
+      ret = 'You are selecting ' + @app.length.to_s + " games\n"
       for key in @app.keys
         ret += format_game_info(@app[key], format) + "\n"
       end
