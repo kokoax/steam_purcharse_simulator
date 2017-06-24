@@ -6,7 +6,7 @@ This application is purchase simulation of games from steam.
 
 # usage example
 - help
-``ruby sps.rb -h
+``ruby sps.rb -h``
 
 ```shell
   $ ruby spsd.rb &
