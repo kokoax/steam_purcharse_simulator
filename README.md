@@ -5,8 +5,11 @@ purchase simulator of steam
 This application is purchase simulation of games from steam.
 
 # usage example
+- help
+``ruby sps.rb -h
+
 ```shell
-  $ ruby spsd.rb
+  $ ruby spsd.rb &
   $ ruby sps.rb --wishlist [username]
     ...  show wishlist infomation  ...
   $ ruby sps.rb --select [appid]
